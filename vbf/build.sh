@@ -1,12 +1,26 @@
 #!/bin/bash
 
-for f in "G1F7-14C368-AA" "G1F7-14C366-AL" "G1F7-14C367-AL" "HP57-14C366-AG" "HP57-14C367-AG" \
-	    "F1FT-14C107-AA" "F1FT-14C104-AN" "F1FT-14C105-AH"; do
-	if [ ! -f "$f.vbf" ] ; then
-	    curl 'https://www.fordtechservice.dealerconnection.com/vdirs/wds/PCMReprogram/DSFM_DownloadFile.asp' --data-raw "filename=$f" --output $f.zip >/dev/null
-	    unzip $f.zip
-	    rm $f.zip
-	fi
+set -e
+
+for f in G1F7-14C368-AA G1F7-14C366-AL G1F7-14C367-AL HP57-14C366-AG HP57-14C367-AG \
+	    F1FT-14C107-AA F1FT-14C104-AN F1FT-14C105-AH; do
+  if ! [[ -f "$f.vbf" ]] ; then
+    for rawfile in $f $f.zip; do
+      set -x
+      curl 'https://www.fordtechservice.dealerconnection.com/vdirs/wds/PCMReprogram/DSFM_DownloadFile.asp' --data-raw "filename=$rawfile" --output $f.zip > /dev/null
+      if unzip -t $f.zip >& /dev/null; then
+        break
+      fi
+    rm $f.zip
+    done
+    if ! [[ -f "$f.zip" ]]; then
+      rm -f $f.zip
+      echo $f.zip is corrupted
+      exit 1
+    fi
+    unzip $f.zip
+    rm $f.zip
+  fi
 done
 
 bspatch ./G1F7-14C366-AL.vbf ./G1F7-14C366-AL-DAFT-T5.vbf ./G1F7-14C366-AL-DAFT-T5.vbf.diff
